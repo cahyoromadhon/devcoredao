@@ -1,0 +1,6 @@
+@media (min-width: 1024px) {
+  div[style*="maxWidth: 420px"] {
+    padding: 3rem 3.5rem !important;
+    max-width: 480px !important;
+  }
+}
