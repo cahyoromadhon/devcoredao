@@ -36,13 +36,21 @@ function App() {
       body: JSON.stringify(payload),
     })
       .then((r) => r.json())
-      .then((d) =>
+      .then((d) => {
+        const lowerMsg = d.message?.toLowerCase() || "";
+        const isError =
+          lowerMsg.includes("tidak") ||
+          lowerMsg.includes("gagal") ||
+          lowerMsg.includes("error") ||
+          lowerMsg.includes("belum") ||
+          lowerMsg.includes("invalid");
+
         setModal({
           show: true,
           message: d.message || "Vote berhasil dikirim.",
-          type: "success",
-        })
-      )
+          type: isError ? "error" : "success",
+        });
+      })
       .catch((e) =>
         setModal({
           show: true,
