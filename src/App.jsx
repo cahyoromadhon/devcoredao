@@ -1,61 +1,68 @@
 import "./App.css";
 import { ConnectButton, useCurrentAccount } from "@mysten/dapp-kit";
 import "@mysten/dapp-kit/dist/index.css";
+// Tidak perlu Buffer atau useSignPersonalMessage
+
+// --- TAMBAHAN: Import useEffect dan useState ---
+import { useState, useEffect } from 'react';
+// ---------------------------------------------
 
 function App() {
   const account = useCurrentAccount();
-  const handleVerifyVote = (pilihan) => {
-    if (!account) {
-      alert("Harap hubungkan dompet Anda terlebih dahulu.");
-      return;
+  
+  const [proposalId, setProposalId] = useState(null);
+
+  useEffect(() => {
+    // Ambil query parameter dari URL browser saat ini
+    const queryParams = new URLSearchParams(window.location.search);
+    const idFromUrl = queryParams.get('proposalId'); // Cari parameter 'proposalId'
+    if (idFromUrl) {
+      console.log("Proposal ID ditemukan di URL:", idFromUrl);
+      setProposalId(idFromUrl); // Simpan ID ke state
+    } else {
+      console.warn("Proposal ID tidak ditemukan di URL query parameters.");
     }
+  }, []); // [] berarti hanya dijalankan sekali saat komponen mount
+  // -------------------------------------------------------------
 
-    console.log(`Mengirim vote: ${account.address} memilih ${pilihan}`);
+  const handleVerifyVote = (pilihan) => {
+    // --- TAMBAHAN: Cek apakah proposalId sudah terbaca ---
+    if (!proposalId) {
+        alert("Error: Proposal ID tidak ditemukan. Pastikan link dari bot benar.");
+        return;
+    }
+    // ----------------------------------------------------
 
-    // Data yang dikirim: alamat dan pilihan
+    if (!account) { /* ... (cek dompet tetap sama) ... */ }
+
+    console.log(`Mengirim vote: ${account.address} memilih ${pilihan} untuk ${proposalId}`);
+
+    // Data yang dikirim: alamat, pilihan, DAN proposalId
     const dataUntukBackend = {
       address: account.address,
-      vote_choice: pilihan // <-- KIRIM PILIHAN YANG DIKLIK
+      vote_choice: pilihan,
+      proposalId: proposalId // <-- SERTAKAN proposalId DARI STATE
     };
 
-    console.log("Data YANG DIKIRIM:", JSON.stringify(dataUntukBackend)); // Log data sebelum fetch
+    console.log("Data YANG DIKIRIM:", JSON.stringify(dataUntukBackend));
 
     // Kirim ke backend API
-    fetch("/api/verify-vote", {
+    fetch(`/api/verify-vote?proposalId=${proposalId}`, { // <-- Kirim proposalId di URL juga (best practice)
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(dataUntukBackend),
+      body: JSON.stringify(dataUntukBackend), // Body sekarang lengkap
     })
-    .then(res => {
-      if (!res.ok) {
-          return res.text().then(text => {
-              // Coba parse teks sebagai JSON jika mungkin, jika tidak, tampilkan teks
-              try {
-                  const errorData = JSON.parse(text);
-                  throw new Error(`Server error: ${res.status} - ${errorData.message || text}`);
-              } catch (e) {
-                  throw new Error(`Server error: ${res.status} - ${text}`);
-              }
-          });
-      }
-      return res.json();
-    })
-    .then(data => {
-      if (data.success) {
-        alert(data.message || "Verifikasi Berhasil!")
-      } else {
-        alert(`Verifikasi Gagal: ${data.message || 'Error tidak diketahui'}`);
-      }
-    })
-    .catch(error => {
-      console.error("Fetch error:", error);
-      alert(`Terjadi Kesalahan: ${error.message}`);
-    });
+    .then(res => { /* ... (penanganan error fetch tetap sama) ... */ })
+    .then(data => { /* ... (penanganan alert tetap sama) ... */ })
+    .catch(error => { /* ... (penanganan error catch tetap sama) ... */ });
   };
 
   return (
     <div>
+      {/* --- TAMBAHAN: Tampilkan ID Proposal --- */}
       <h2>Verifikasi Suara DAO</h2>
+      {proposalId && <p>Proposal ID: <code>{proposalId}</code></p>}
+      {/* -------------------------------------- */}
       <p>Hubungkan dompet Sui Anda untuk melanjutkan.</p>
 
       <ConnectButton />
@@ -64,6 +71,7 @@ function App() {
       {account && (
         <div>
           <p>Terhubung sebagai: {account.address}</p>
+          {/* Tombol Setuju/Tidak tetap sama */}
           <button onClick={() => handleVerifyVote('Setuju')}>
             Verifikasi Pilihan: Setuju 👍
           </button>
