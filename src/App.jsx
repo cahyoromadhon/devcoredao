@@ -164,13 +164,13 @@ function App() {
                 )}
             </div>
 
-            <div style={{ display: "flex", gap: "0.8rem", justifyContent: "center" }}>
+            <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
               <button
                 disabled={isLoading || voteStatus.remainingVotes <= 0}
                 onClick={() => handleVerifyVote("Setuju")}
                 style={{
                   background: "#ffffff08", border: "1px solid #ffffff20", color: "#fff",
-                  padding: "0.7rem 1.3rem", borderRadius: "8px", fontSize: "0.9rem",
+                  padding: "1rem 2.5rem", borderRadius: "8px", fontSize: "1.1rem",
                   transition: "all 0.2s ease",
                   opacity: (isLoading || voteStatus.remainingVotes <= 0) ? 0.4 : 1,
                   cursor: (isLoading || voteStatus.remainingVotes <= 0) ? "not-allowed" : "pointer"
@@ -186,7 +186,7 @@ function App() {
                 onClick={() => handleVerifyVote("Tidak")}
                 style={{
                   background: "#ffffff08", border: "1px solid #ffffff20", color: "#fff",
-                  padding: "0.7rem 1.3rem", borderRadius: "8px", fontSize: "0.9rem",
+                  padding: "1rem 2.5rem", borderRadius: "8px", fontSize: "1.1rem",
                   transition: "all 0.2s ease",
                   opacity: (isLoading || voteStatus.remainingVotes <= 0) ? 0.4 : 1,
                   cursor: (isLoading || voteStatus.remainingVotes <= 0) ? "not-allowed" : "pointer"
