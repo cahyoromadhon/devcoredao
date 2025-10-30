@@ -107,7 +107,7 @@ export default async function handler(req, res) {
         console.log("Berhasil mencatat suara ke Supabase:", data);
         return res.status(200).json({ 
             success: true, 
-            message: `Suara Anda (1 dari ${totalNFTs}) terverifikasi. Sisa suara: ${remainingVotes - 1}`
+            message: `Vote Berhasil Dicatat!`
         });
       }
 
