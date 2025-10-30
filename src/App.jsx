@@ -127,12 +127,6 @@ function App() {
           Verifikasi Suara DAO
         </h2>
 
-        {voteId && (
-          <p style={{ color: "#aaa", fontSize: "0.85rem", marginBottom: "1rem" }}>
-            Vote ID: <code style={{ color: "#fff" }}>{voteId}</code>
-          </p>
-        )}
-
         <p style={{ fontSize: "0.9rem", color: "#bbb", marginBottom: "1.5rem" }}>
           Hubungkan dompet Sui Anda untuk melanjutkan.
         </p>
