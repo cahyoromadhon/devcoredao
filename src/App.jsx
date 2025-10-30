@@ -5,17 +5,17 @@ import { useState, useEffect } from "react";
 
 function App() {
   const account = useCurrentAccount();
-  const [proposalId, setProposalId] = useState(null);
+  const [voteId, setVoteId] = useState(null);
   const [modal, setModal] = useState({ show: false, message: "", type: "info" });
 
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
-    const idFromUrl = queryParams.get("proposalId");
-    if (idFromUrl) setProposalId(idFromUrl);
+    const idFromUrl = queryParams.get("voteId");
+    if (idFromUrl) setVoteId(idFromUrl);
   }, []);
 
   const handleVerifyVote = (choice) => {
-    if (!proposalId) {
+    if (!voteId) {
       setModal({ show: true, message: "Proposal ID tidak ditemukan.", type: "error" });
       return;
     }
@@ -27,10 +27,10 @@ function App() {
     const payload = {
       address: account.address,
       vote_choice: choice,
-      proposalId,
+      voteId,
     };
 
-    fetch(`/api/verify-vote?proposalId=${proposalId}`, {
+    fetch(`/api/verify-vote?voteId=${voteId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -101,9 +101,9 @@ function App() {
           Verifikasi Suara DAO
         </h2>
 
-        {proposalId && (
+        {voteId && (
           <p style={{ color: "#aaa", fontSize: "0.85rem", marginBottom: "1rem" }}>
-            Proposal ID: <code style={{ color: "#fff" }}>{proposalId}</code>
+            Proposal ID: <code style={{ color: "#fff" }}>{voteId}</code>
           </p>
         )}
 

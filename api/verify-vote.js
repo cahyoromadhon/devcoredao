@@ -23,14 +23,14 @@ export default async function handler(req, res) {
 
   try {
     const { address, vote_choice } = req.body;
-    const proposalId = req.query.proposalId;
+    const voteId = req.query.voteId;
 
-    if (!address || !vote_choice || !proposalId) {
-      console.log("Missing data:", { address, vote_choice, proposalId });
-      return res.status(400).json({ success: false, message: "Data tidak lengkap (alamat, pilihan suara, atau proposal ID)." });
+    if (!address || !vote_choice || !voteId) {
+      console.log("Missing data:", { address, vote_choice, voteId });
+      return res.status(400).json({ success: false, message: "Data tidak lengkap (alamat, pilihan suara, atau vote ID)." });
     }
 
-    console.log(`Menerima vote: ${address} memilih ${vote_choice} untuk ${proposalId}`);
+    console.log(`Menerima vote: ${address} memilih ${vote_choice} untuk ${voteId}`);
 
     const objects = await suiClient.getOwnedObjects({
       owner: address,
@@ -42,12 +42,12 @@ export default async function handler(req, res) {
     if (objects.data.length > 0) {
       console.log(`Kualifikasi SUKSES: ${address} memiliki NFT.`);
 
-      // --- TULIS KE SUPABASE (Gunakan proposalId) ---
+      // --- TULIS KE SUPABASE (Gunakan voteId) ---
       const { data, error } = await supabase
         .from('votes')
         .insert([
           {
-            proposal_id: proposalId, // <-- Gunakan ID dari URL
+            vote_id: voteId, // <-- Gunakan ID dari URL
             voter_address: address,
             vote_choice: vote_choice
           }
@@ -61,7 +61,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, message: "Verifikasi OK, tapi gagal catat suara (DB Error)." });
       } else {
         console.log("Berhasil mencatat suara ke Supabase:", data);
-        return res.status(200).json({ success: true, message: `Suara untuk ${proposalId} terverifikasi dan dicatat!` });
+        return res.status(200).json({ success: true, message: `Suara untuk ${voteId} terverifikasi dan dicatat!` });
       }
       // --- AKHIR TULIS SUPABASE ---
 
