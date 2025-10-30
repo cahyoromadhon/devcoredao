@@ -14,65 +14,108 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const REQUIRED_NFT_TYPE = `${NFT_PACKAGE_ID}::nft::MyNFT`;
 const suiClient = new SuiClient({ url: getFullnodeUrl("testnet") });
 
-export default async function handler(req, res) {
-  console.log("Full Request URL:", req.url);
-  console.log("Parsed Query Parameters:", req.query);
-  if (req.method !== "POST") {
-    return res.status(405).json({ success: false, message: "Method Not Allowed" });
-  }
-
-  try {
-    const { address, vote_choice } = req.body;
-    const voteId = req.query.voteId;
-
-    if (!address || !vote_choice || !voteId) {
-      console.log("Missing data:", { address, vote_choice, voteId });
-      return res.status(400).json({ success: false, message: "Data tidak lengkap (alamat, pilihan suara, atau vote ID)." });
-    }
-
-    console.log(`Menerima vote: ${address} memilih ${vote_choice} untuk ${voteId}`);
-
+async function getVoteStatus(address, voteId) {
+    // 1. Cek total NFT yang dimiliki
     const objects = await suiClient.getOwnedObjects({
       owner: address,
       filter: { StructType: REQUIRED_NFT_TYPE },
-      options: { showType: false }, // Tidak perlu tipe, hanya cek keberadaan
-      limit: 1, // Hanya perlu 1 untuk konfirmasi
+      options: { showType: false }, // Tidak perlu konten, hanya jumlah
     });
+    const totalNFTs = objects.data.length;
 
-    if (objects.data.length > 0) {
-      console.log(`Kualifikasi SUKSES: ${address} memiliki NFT.`);
+    if (totalNFTs === 0) {
+        return { totalNFTs: 0, usedVotes: 0, remainingVotes: 0 };
+    }
 
-      // --- TULIS KE SUPABASE (Gunakan voteId) ---
+    // 2. Cek vote yang sudah digunakan di Supabase
+    const { data: usedVotesData, error } = await supabase
+        .from('votes')
+        .select('voter_address', { count: 'exact' }) // Hanya hitung jumlah
+        .eq('vote_id', voteId)
+        .eq('voter_address', address);
+
+    if (error) {
+        console.error("Gagal mengecek vote (select):", error.message);
+        throw new Error("Internal server error (DB Check).");
+    }
+
+    const usedVotes = usedVotesData ? usedVotesData.length : 0;
+    
+    // 3. Hitung sisa
+    const remainingVotes = totalNFTs - usedVotes;
+
+    return { totalNFTs, usedVotes, remainingVotes };
+}
+
+export default async function handler(req, res) {
+  if (req.method === "GET") {
+      try {
+          const { address, voteId } = req.query;
+          if (!address || !voteId) {
+              return res.status(400).json({ success: false, message: "Alamat atau vote ID tidak ada." });
+          }
+          const status = await getVoteStatus(address, voteId);
+          return res.status(200).json({ success: true, ...status });
+      } catch (error) {
+          console.error("Error di GET /api/verify-vote:", error);
+          return res.status(500).json({ success: false, message: error.message });
+      }
+  }
+
+  if (req.method === "POST") {
+    try {
+      const { address, vote_choice } = req.body;
+      const voteId = req.query.voteId; 
+
+      if (!address || !vote_choice || !voteId) {
+        console.error("Validation failed. Missing data:", { address, vote_choice, voteId }); 
+        return res.status(400).json({ success: false, message: "Data tidak lengkap (alamat, pilihan suara, atau vote ID)." });
+      }
+
+      console.log(`Menerima vote: ${address} memilih ${vote_choice} untuk ${voteId}`);
+
+      const { totalNFTs, usedVotes, remainingVotes } = await getVoteStatus(address, voteId);
+
+      if (totalNFTs === 0) {
+          console.log(`Kualifikasi GAGAL: ${address} tidak memiliki NFT.`);
+          return res.status(403).json({ success: false, message: "Anda tidak memegang NFT yang disyaratkan." });
+      }
+
+      if (remainingVotes <= 0) {
+          console.log(`Vote DITOLAK: ${address} sudah menggunakan semua ${totalNFTs} suaranya untuk ${voteId}.`);
+          return res.status(409).json({ success: false, message: "Anda sudah menggunakan semua suara Anda untuk ID ini." });
+      }
+      
+      console.log(`Kualifikasi SUKSES: ${address} memiliki ${remainingVotes} suara tersisa.`);
+
       const { data, error } = await supabase
         .from('votes')
         .insert([
           {
-            vote_id: voteId, // <-- Gunakan ID dari URL
+            vote_id: voteId, 
             voter_address: address,
-            vote_choice: vote_choice
+            vote_choice: vote_choice,
+            vote_weight: 1
           }
         ])
-        .select(); // Tambahkan .select() untuk mendapatkan data yang baru dimasukkan (jika perlu)
+        .select();
 
       if (error) {
-        // Log error Supabase yang lebih detail
-        console.error("Gagal menulis ke Supabase:", error.message, error.details, error.hint);
-        // Tetap kirim sukses ke frontend, tapi beri catatan
-        return res.status(200).json({ success: true, message: "Verifikasi OK, tapi gagal catat suara (DB Error)." });
+        console.error("Gagal menulis ke Supabase:", error.message);
+        return res.status(500).json({ success: false, message: "Gagal mencatat suara (DB Insert Error)." });
       } else {
         console.log("Berhasil mencatat suara ke Supabase:", data);
-        return res.status(200).json({ success: true, message: `Suara untuk ${voteId} terverifikasi dan dicatat!` });
+        return res.status(200).json({ 
+            success: true, 
+            message: `Suara Anda (1 dari ${totalNFTs}) terverifikasi. Sisa suara: ${remainingVotes - 1}`
+        });
       }
-      // --- AKHIR TULIS SUPABASE ---
 
-    } else {
-      console.log(`Kualifikasi GAGAL: ${address} tidak memiliki NFT.`);
-      return res.status(403).json({ success: false, message: "Anda tidak memegang NFT yang disyaratkan." });
+    } catch (error) {
+      console.error("Error di Backend:", error);
+      return res.status(500).json({ success: false, message: "Terjadi kesalahan internal pada server." });
     }
-
-  } catch (error) {
-    console.error("Error di Backend:", error); // Log error asli
-    // Kirim pesan error yang lebih umum ke frontend
-    return res.status(500).json({ success: false, message: "Terjadi kesalahan internal pada server." });
   }
+
+  return res.status(405).json({ success: false, message: "Method Not Allowed" });
 }
