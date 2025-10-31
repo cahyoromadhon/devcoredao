@@ -12,7 +12,7 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !NFT_PACKAGE_ID) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const REQUIRED_NFT_TYPE = `${NFT_PACKAGE_ID}::nft::MyNFT`;
-const suiClient = new SuiClient({ url: getFullnodeUrl("testnet") });
+const suiClient = new SuiClient({ url: getFullnodeUrl("mainnet") });
 
 async function getVoteStatus(address, voteId) {
     // 1. Cek total NFT yang dimiliki
